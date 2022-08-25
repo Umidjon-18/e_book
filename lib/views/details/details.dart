@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 // import 'package:epub_viewer/epub_viewer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_ebook_app/components/book_list_item.dart';
 import 'package:flutter_ebook_app/components/description_text.dart';
 import 'package:flutter_ebook_app/components/loading_widget.dart';
@@ -13,6 +14,9 @@ import 'package:flutter_icons/flutter_icons.dart';
 import 'package:iridium_reader_widget/views/viewers/epub_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:share/share.dart';
+
+import '../../bloc/detail_bloc/detail_cubit.dart';
+import '../../bloc/detail_bloc/detail_state.dart';
 
 class Details extends StatefulWidget {
   final Entry entry;
@@ -38,9 +42,8 @@ class _DetailsState extends State<Details> {
     super.initState();
     SchedulerBinding.instance.addPostFrameCallback(
       (_) {
-        Provider.of<DetailsProvider>(context, listen: false)
-            .setEntry(widget.entry);
-        Provider.of<DetailsProvider>(context, listen: false)
+        BlocProvider.of<DetailsBloc>(context, listen: false).setEntry(widget.entry);
+        BlocProvider.of<DetailsBloc>(context, listen: false)
             .getFeed(widget.entry.author!.uri!.t!.replaceAll(r'\&lang=en', ''));
       },
     );
@@ -48,23 +51,22 @@ class _DetailsState extends State<Details> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DetailsProvider>(
-      builder: (BuildContext context, DetailsProvider detailsProvider,
-          Widget? child) {
+    return BlocBuilder<DetailsBloc, DetailsState>(
+      builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
             actions: <Widget>[
               IconButton(
                 onPressed: () async {
-                  if (detailsProvider.faved) {
-                    detailsProvider.removeFav();
+                  if (context.read<DetailsBloc>().faved) {
+                    context.read<DetailsBloc>().removeFav();
                   } else {
-                    detailsProvider.addFav();
+                    context.read<DetailsBloc>().addFav();
                   }
                 },
                 icon: Icon(
-                  detailsProvider.faved ? Icons.favorite : Feather.heart,
-                  color: detailsProvider.faved
+                  context.read<DetailsBloc>().faved ? Icons.favorite : Feather.heart,
+                  color: context.read<DetailsBloc>().faved
                       ? Colors.red
                       : Theme.of(context).iconTheme.color,
                 ),
@@ -81,7 +83,7 @@ class _DetailsState extends State<Details> {
             padding: EdgeInsets.symmetric(horizontal: 20.0),
             children: <Widget>[
               SizedBox(height: 10.0),
-              _buildImageTitleSection(detailsProvider),
+              _buildImageTitleSection(context),
               SizedBox(height: 30.0),
               _buildSectionTitle('Book Description'),
               _buildDivider(),
@@ -93,10 +95,11 @@ class _DetailsState extends State<Details> {
               _buildSectionTitle('More from Author'),
               _buildDivider(),
               SizedBox(height: 10.0),
-              _buildMoreBook(detailsProvider),
+              _buildMoreBook(context),
             ],
           ),
         );
+      
       },
     );
   }
@@ -107,7 +110,7 @@ class _DetailsState extends State<Details> {
     );
   }
 
-  _buildImageTitleSection(DetailsProvider detailsProvider) {
+  _buildImageTitleSection(BuildContext context) {
     return Container(
       child: Row(
         mainAxisSize: MainAxisSize.max,
@@ -171,7 +174,7 @@ class _DetailsState extends State<Details> {
                   child: Container(
                     height: 50.0,
                     width: MediaQuery.of(context).size.width,
-                    child: _buildDownloadReadButton(detailsProvider, context),
+                    child: _buildDownloadReadButton(context),
                   ),
                 ),
               ],
@@ -193,8 +196,8 @@ class _DetailsState extends State<Details> {
     );
   }
 
-  _buildMoreBook(DetailsProvider provider) {
-    if (provider.loading) {
+  _buildMoreBook(BuildContext context) {
+    if (context.read<DetailsBloc>().loading) {
       return Container(
         height: 100.0,
         child: LoadingWidget(),
@@ -203,9 +206,9 @@ class _DetailsState extends State<Details> {
       return ListView.builder(
         shrinkWrap: true,
         physics: NeverScrollableScrollPhysics(),
-        itemCount: provider.related.feed!.entry!.length,
+        itemCount: context.read<DetailsBloc>().related.feed!.entry!.length,
         itemBuilder: (BuildContext context, int index) {
-          Entry entry = provider.related.feed!.entry![index];
+          Entry entry = context.read<DetailsBloc>().related.feed!.entry![index];
           return Padding(
             padding: EdgeInsets.symmetric(vertical: 5.0),
             child: BookListItem(
@@ -217,8 +220,8 @@ class _DetailsState extends State<Details> {
     }
   }
 
-  openBook(DetailsProvider provider) async {
-    List dlList = await provider.getDownload();
+  openBook(BuildContext context) async {
+    List dlList = await context.read<DetailsBloc>().getDownload();
     if (dlList.isNotEmpty) {
       // dlList is a list of the downloads relating to this Book's id.
       // The list will only contain one item since we can only
@@ -231,10 +234,10 @@ class _DetailsState extends State<Details> {
     }
   }
 
-  _buildDownloadReadButton(DetailsProvider provider, BuildContext context) {
-    if (provider.downloaded) {
+  _buildDownloadReadButton(BuildContext context) {
+    if (context.read<DetailsBloc>().downloaded) {
       return TextButton(
-        onPressed: () => openBook(provider),
+        onPressed: () => openBook(context),
         child: Text(
           'Read Book',
           style: TextStyle(fontSize: 13, color: Colors.black),
@@ -242,7 +245,7 @@ class _DetailsState extends State<Details> {
       );
     } else {
       return TextButton(
-        onPressed: () => provider.downloadFile(
+        onPressed: () => context.read<DetailsBloc>().downloadFile(
           context,
           widget.entry.link![3].href!,
           widget.entry.title!.t!.replaceAll(' ', '_').replaceAll(r"\'", "'"),

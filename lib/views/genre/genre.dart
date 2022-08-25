@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_ebook_app/components/body_builder.dart';
 import 'package:flutter_ebook_app/components/book_list_item.dart';
 import 'package:flutter_ebook_app/components/loading_widget.dart';
 import 'package:flutter_ebook_app/models/category.dart';
-import 'package:flutter_ebook_app/view_models/genre_provider.dart';
-import 'package:provider/provider.dart';
+
+import '../../bloc/genre_bloc/genre_cubit.dart';
+import '../../bloc/genre_bloc/genre_state.dart';
 
 class Genre extends StatefulWidget {
   final String title;
@@ -26,45 +28,45 @@ class _GenreState extends State<Genre> {
   void initState() {
     super.initState();
     SchedulerBinding.instance.addPostFrameCallback(
-      (_) => Provider.of<GenreProvider>(context, listen: false)
+      (_) => BlocProvider.of<GenreBloc>(context, listen: false)
           .getFeed(widget.url),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer(
-      builder: (BuildContext context, GenreProvider provider, Widget? child) {
+    return BlocBuilder<GenreBloc, GenreState>(
+      builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
             centerTitle: true,
             title: Text('${widget.title}'),
           ),
-          body: _buildBody(provider),
+          body: _buildBody(context),
         );
       },
     );
   }
 
-  Widget _buildBody(GenreProvider provider) {
+  Widget _buildBody(BuildContext context) {
     return BodyBuilder(
-      apiRequestStatus: provider.apiRequestStatus,
-      child: _buildBodyList(provider),
-      reload: () => provider.getFeed(widget.url),
+      genreApiRequestStatus: context.read<GenreBloc>().apiRequestStatus,
+      child: _buildBodyList(context),
+      reload: () => context.read<GenreBloc>().getFeed(widget.url),
     );
   }
 
-  _buildBodyList(GenreProvider provider) {
+  _buildBodyList(BuildContext context) {
     return ListView(
-      controller: provider.controller,
+      controller: context.read<GenreBloc>().controller,
       children: <Widget>[
         ListView.builder(
           physics: NeverScrollableScrollPhysics(),
           padding: EdgeInsets.symmetric(horizontal: 10.0),
           shrinkWrap: true,
-          itemCount: provider.items.length,
+          itemCount: context.read<GenreBloc>().items.length,
           itemBuilder: (BuildContext context, int index) {
-            Entry entry = provider.items[index];
+            Entry entry = context.read<GenreBloc>().items[index];
             return Padding(
               padding: EdgeInsets.all(5.0),
               child: BookListItem(
@@ -74,7 +76,7 @@ class _GenreState extends State<Genre> {
           },
         ),
         SizedBox(height: 10.0),
-        provider.loadingMore
+        context.read<GenreBloc>().loadingMore
             ? Container(
                 height: 80.0,
                 child: _buildProgressIndicator(),

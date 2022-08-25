@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_ebook_app/bloc/home_bloc/home_state.dart';
 import 'package:flutter_ebook_app/components/error_widget.dart';
 import 'package:flutter_ebook_app/components/loading_widget.dart';
-import 'package:flutter_ebook_app/util/enum/api_request_status.dart';
+
+import '../bloc/genre_bloc/genre_state.dart';
 
 class BodyBuilder extends StatelessWidget {
-  final APIRequestStatus apiRequestStatus;
+  final HomeState? homeApiRequestStatus;
+  final GenreState? genreApiRequestStatus;
   final Widget child;
   final Function reload;
 
   BodyBuilder(
-      {Key? key,
-      required this.apiRequestStatus,
-      required this.child,
-      required this.reload})
+      {Key? key, this.homeApiRequestStatus, this.genreApiRequestStatus, required this.child, required this.reload})
       : super(key: key);
 
   @override
@@ -21,25 +21,45 @@ class BodyBuilder extends StatelessWidget {
   }
 
   Widget _buildBody() {
-    switch (apiRequestStatus) {
-      case APIRequestStatus.loading:
-        return LoadingWidget();
-      case APIRequestStatus.unInitialized:
-        return LoadingWidget();
-      case APIRequestStatus.connectionError:
+    if (homeApiRequestStatus != null) {
+      if (homeApiRequestStatus is HomeStateIsLoading) return LoadingWidget();
+      if (homeApiRequestStatus is HomeStateIsUnInitialized) return LoadingWidget();
+      if (homeApiRequestStatus is HomeStateIsConnectionError)
         return MyErrorWidget(
           refreshCallBack: reload,
           isConnection: true,
         );
-      case APIRequestStatus.error:
+      if (homeApiRequestStatus is HomeStateIsError)
         return MyErrorWidget(
           refreshCallBack: reload,
-          isConnection: false,
+          isConnection: true,
         );
-      case APIRequestStatus.loaded:
+      if (homeApiRequestStatus is HomeStateIsLoaded)
         return child;
-      default:
+      else
         return LoadingWidget();
     }
+    if (genreApiRequestStatus != null) {
+      if (genreApiRequestStatus is GenreStateIsLoading) return LoadingWidget();
+      if (genreApiRequestStatus is GenreStateIsUnInitialized) return LoadingWidget();
+      if (genreApiRequestStatus is GenreStateIsConnectionError)
+        return MyErrorWidget(
+          refreshCallBack: reload,
+          isConnection: true,
+        );
+      if (genreApiRequestStatus is GenreStateIsError)
+        return MyErrorWidget(
+          refreshCallBack: reload,
+          isConnection: true,
+        );
+      if (genreApiRequestStatus is GenreStateIsLoaded)
+        return child;
+      else
+        return LoadingWidget();
+    }
+    return LoadingWidget();
   }
 }
+
+
+// explore, home, genre 

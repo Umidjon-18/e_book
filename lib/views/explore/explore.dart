@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_ebook_app/components/body_builder.dart';
 import 'package:flutter_ebook_app/components/book_card.dart';
 import 'package:flutter_ebook_app/components/loading_widget.dart';
 import 'package:flutter_ebook_app/models/category.dart';
 import 'package:flutter_ebook_app/util/api.dart';
 import 'package:flutter_ebook_app/util/router.dart';
-import 'package:flutter_ebook_app/view_models/home_provider.dart';
 import 'package:flutter_ebook_app/views/genre/genre.dart';
-import 'package:provider/provider.dart';
+
+import '../../bloc/home_bloc/home_cubit.dart';
+import '../../bloc/home_bloc/home_state.dart';
 
 class Explore extends StatefulWidget {
   @override
@@ -19,8 +21,8 @@ class _ExploreState extends State<Explore> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<HomeProvider>(
-      builder: (BuildContext context, HomeProvider homeProvider, Widget? child) {
+    return BlocBuilder<HomeBloc, HomeState>(
+      builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
             centerTitle: true,
@@ -29,20 +31,21 @@ class _ExploreState extends State<Explore> {
             ),
           ),
           body: BodyBuilder(
-            apiRequestStatus: homeProvider.apiRequestStatus,
-            child: _buildBodyList(homeProvider),
-            reload: () => homeProvider.getFeeds(),
+            homeApiRequestStatus: context.read<HomeBloc>().apiRequestStatus,
+            child: _buildBodyList(context),
+            reload: () => context.read<HomeBloc>().getFeeds(),
           ),
         );
+      
       },
     );
   }
 
-  _buildBodyList(HomeProvider homeProvider) {
+  _buildBodyList(BuildContext context) {
     return ListView.builder(
-      itemCount: homeProvider.top.feed?.link?.length ?? 0,
+      itemCount: context.read<HomeBloc>().top.feed?.link?.length ?? 0,
       itemBuilder: (BuildContext context, int index) {
-        Link link = homeProvider.top.feed!.link![index];
+        Link link = context.read<HomeBloc>().top.feed!.link![index];
 
         // We don't need the tags from 0-9 because
         // they are not categories
